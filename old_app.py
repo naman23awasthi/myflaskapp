@@ -1,22 +1,20 @@
-from flask import Flask, render_template, flash, redirect, url_for, session, request, logging,send_file
+from flask import Flask, render_template, flash, redirect, url_for, session, request, logging
 #from data import Articles
 from flask_mysqldb import MySQL
 from wtforms import Form, StringField, TextAreaField, PasswordField, validators
 from passlib.hash import sha256_crypt
 from functools import wraps
-from pathlib import Path
 
 app = Flask(__name__)
 
-# Config MySQL
-app.config['MYSQL_HOST'] = 'localhost'
-app.config['MYSQL_USER'] = 'nawasthi'
-app.config['MYSQL_PASSWORD'] = 'Tmmtpkhm2lmybnhp'
-app.config['MYSQL_DB'] = 'authorize'
-app.config["MYSQL_UNIX_SOCKET"]="/tmp/mysql.sock"
-app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
-# init MYSQL
-mysql = MySQL(app)
+# # Config MySQL
+# app.config['MYSQL_HOST'] = 'localhost'
+# app.config['MYSQL_USER'] = 'root'
+# app.config['MYSQL_PASSWORD'] = '123456'
+# app.config['MYSQL_DB'] = 'myflaskapp'
+# app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
+# # init MYSQL
+# mysql = MySQL(app)
 
 #Articles = Articles()
 
@@ -36,12 +34,12 @@ def about():
 @app.route('/articles')
 def articles():
     # Create cursor
-    cur = mysql.connection.cursor()
+#     cur = mysql.connection.cursor()
 
-    # Get articles
-    result = cur.execute("SELECT * FROM articles")
+#     # Get articles
+#     result = cur.execute("SELECT * FROM articles")
 
-    articles = cur.fetchall()
+#     articles = cur.fetchall()
 
     if result > 0:
         return render_template('articles.html', articles=articles)
@@ -55,33 +53,21 @@ def articles():
 #Single Article
 @app.route('/article/<string:id>/')
 def article(id):
-    # Create cursor
-    cur = mysql.connection.cursor()
+#     # Create cursor
+#     cur = mysql.connection.cursor()
 
-    # Get article
-    result = cur.execute("SELECT * FROM articles WHERE id = %s", [id])
+#     # Get article
+#     result = cur.execute("SELECT * FROM articles WHERE id = %s", [id])
 
-    article = cur.fetchone()
+#     article = cur.fetchone()
 
-    return render_template('article.html', article=article)
-
-# Survey Form Class
-class SurveyForm(Form):
-    firstname = StringField('First Name', [validators.Length(min=1, max=50)])
-    lastname = StringField('Last Name', [validators.Length(min=1, max=50)])
-    email = StringField('Email', [validators.Length(min=6, max=50)])
-    password = PasswordField('Password', [
-        validators.DataRequired(),
-        validators.EqualTo('confirm', message='Passwords do not match')
-    ])
-    confirm = PasswordField('Confirm Password')
-
+    return render_template('article.html', article=id)
 
 
 # Register Form Class
 class RegisterForm(Form):
-    firstname = StringField('First Name', [validators.Length(min=1, max=50)])
-    lastname = StringField('Last Name', [validators.Length(min=1, max=50)])
+    name = StringField('Name', [validators.Length(min=1, max=50)])
+    username = StringField('Username', [validators.Length(min=4, max=25)])
     email = StringField('Email', [validators.Length(min=6, max=50)])
     password = PasswordField('Password', [
         validators.DataRequired(),
@@ -95,22 +81,22 @@ class RegisterForm(Form):
 def register():
     form = RegisterForm(request.form)
     if request.method == 'POST' and form.validate():
-        firstname = form.firstname.data
-        lastname = form.lastname.data
+        name = form.name.data
         email = form.email.data
+        username = form.username.data
         password = sha256_crypt.encrypt(str(form.password.data))
 
         # Create cursor
-        cur = mysql.connection.cursor()
+#         cur = mysql.connection.cursor()
 
-        # Execute query
-        cur.execute("INSERT INTO authtable(first_name, last_name, email, password) VALUES(%s, %s, %s, %s)", (firstname,lastname , email, password))
+#         # Execute query
+#         cur.execute("INSERT INTO users(name, email, username, password) VALUES(%s, %s, %s, %s)", (name, email, username, password))
 
-        # Commit to DB
-        mysql.connection.commit()
+#         # Commit to DB
+#         mysql.connection.commit()
 
-        # Close connection
-        cur.close()
+#         # Close connection
+#         cur.close()
 
         flash('You are now registered and can log in', 'success')
 
@@ -123,40 +109,46 @@ def register():
 def login():
     if request.method == 'POST':
         # Get Form Fields
-        #print(request.form, "WOOOOOOO"*50)
-        username = request.form['Email']
-        
+        print("This is POST")
+        username = request.form['username']
         password_candidate = request.form['password']
+        if username=="":
+            print("going to login.html")
+            return render_template('login.html')
+        session['logged_in'] = True
+        session['username'] = username
+        flash('You are now logged in', 'success')
+        return redirect(url_for('dashboard'))
+#         # Create cursor
+#         cur = mysql.connection.cursor()
 
-        # Create cursor
-        cur = mysql.connection.cursor()
+#         # Get user by username
+#         result = cur.execute("SELECT * FROM users WHERE username = %s", [username])
 
-        # Get user by username
-        result = cur.execute("SELECT * FROM authtable WHERE email = %s", [username])
+#         if result > 0:
+#             # Get stored hash
+#             data = cur.fetchone()
+#             password = data['password']
 
-        if result > 0:
-            # Get stored hash
-            data = cur.fetchone()
-            password = data['password']
+#             # Compare Passwords
+#             if sha256_crypt.verify(password_candidate, password):
+#                 # Passed
+#                 session['logged_in'] = True
+#                 session['username'] = username
 
-            # Compare Passwords
-            if sha256_crypt.verify(password_candidate, password):
-                # Passed
-                session['logged_in'] = True
-                session['username'] = username
-
-                flash('You are now logged in', 'success')
-                return redirect(url_for('dashboard'))
-            else:
-                error = 'Invalid login'
-                return render_template('login.html', error=error)
-            # Close connection
-            cur.close()
-        else:
-            error = 'Username not found'
-            return render_template('login.html', error=error)
-
+#                 flash('You are now logged in', 'success')
+#                 return redirect(url_for('dashboard'))
+#             else:
+#                 error = 'Invalid login'
+#                 return render_template('login.html', error=error)
+#             # Close connection
+#             cur.close()
+#         else:
+#             error = 'Username not found'
+#             return render_template('login.html', error=error)
     return render_template('login.html')
+
+    
 
 # Check if user logged in
 def is_logged_in(f):
@@ -177,31 +169,22 @@ def logout():
     flash('You are now logged out', 'success')
     return redirect(url_for('login'))
 
-@app.route('/maps/<x>')
-def show_map(x):
-    print(x,"tried showmap"*50)
-    map_path = f"templates/maps/{x}.html"
-    
-    return send_file(Path(map_path))
-
 # Dashboard
 @app.route('/dashboard')
 @is_logged_in
 def dashboard():
-    #EDIT HERE TO LOAD THE TEMPLATE FOR THIS PARTICULAR EMAIL ID. 
-    
     # Create cursor
-    cur = mysql.connection.cursor()
+#     cur = mysql.connection.cursor()
 
     # Get articles
     #result = cur.execute("SELECT * FROM articles")
     # Show articles only from the user logged in 
-    result = cur.execute("SELECT * FROM SurveyQuestions WHERE email = %s", [session['username']])
+#     result = cur.execute("SELECT * FROM articles WHERE author = %s", [session['username']])
 
-    questions = cur.fetchall()
-
+#     articles = cur.fetchall()
+    result = len(session["username"])
     if result > 0:
-        return render_template('dashboard.html', questions=questions)
+        return render_template('dashboard.html', articles=session['username'])
     else:
         msg = 'No Articles Found'
         return render_template('dashboard.html', msg=msg)
@@ -246,13 +229,14 @@ def add_article():
 @is_logged_in
 def edit_article(id):
     # Create cursor
-    cur = mysql.connection.cursor()
+#     cur = mysql.connection.cursor()
 
-    # Get article by id
-    result = cur.execute("SELECT * FROM articles WHERE id = %s", [id])
+#     # Get article by id
+#     result = cur.execute("SELECT * FROM articles WHERE id = %s", [id])
 
-    article = cur.fetchone()
-    cur.close()
+#     article = cur.fetchone()
+#     cur.close()
+    
     # Get form
     form = ArticleForm(request.form)
 
@@ -304,7 +288,3 @@ def delete_article(id):
 if __name__ == '__main__':
     app.secret_key='secret123'
     app.run(debug=True,host = "0.0.0.0",port = 23235)
-
-# if __name__ == '__main__':
-#     app.secret_key='secret123'
-#     app.run(debug=True)
